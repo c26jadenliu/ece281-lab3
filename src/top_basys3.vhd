@@ -71,8 +71,8 @@ entity top_basys3 is
 
 		-- LEDs (16 total)
 		-- taillights (LC, LB, LA, RA, RB, RC)
-		led 	:   out std_logic_vector(15 downto 0);  -- led(15:13) --> L
-                                                        -- led(2:0)   --> R
+		led_left  : out std_logic_vector(2 downto 0);  --15:13
+        led_right : out std_logic_vector(2 downto 0);
 		
 		-- Buttons (5 total)
 		--btnC	:	in	std_logic
@@ -86,21 +86,63 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is 
   
 	-- declare components
-
+    component clock_divider is
+        generic(
+            k_DIV : natural := 2  -- default, override with generic map
+        );
+        port(
+            i_clk   : in  std_logic;  -- 100 MHz input
+            i_reset : in  std_logic;  -- reset (optional)
+            o_clk   : out std_logic   -- slowed-down clock
+        );
+    end component;
+    
+    component thunderbird_fsm is
+        port (
+            i_clk, i_reset  : in  std_logic;
+            i_left, i_right : in  std_logic;
+            o_lights_L      : out std_logic_vector(2 downto 0);
+            o_lights_R      : out std_logic_vector(2 downto 0)
+        );
+    end component;
+    
+    --wires
+    signal w_slow_clk : std_logic;
+    signal w_lightsL  : std_logic_vector(2 downto 0);
+    signal w_lightsR  : std_logic_vector(2 downto 0);
   
 begin
 	-- PORT MAPS ----------------------------------------
-
+    u_clock_divider : clock_divider
+        generic map (
+            k_DIV => 25000000
+        )
+        port map(
+            i_clk   => clk,
+            i_reset => btnL,       -- optional use of btnL as clock reset
+            o_clk   => w_slow_clk
+        );
 	
-	
+	u_thunderbird_fsm : thunderbird_fsm
+        port map(
+            i_clk    => w_slow_clk,     -- use the slowed-down clock
+            i_reset  => btnR,           -- use btnR as FSM reset
+            i_left   => sw(15),
+            i_right  => sw(0),
+            o_lights_L => w_lightsL,
+            o_lights_R => w_lightsR
+        );
+      
+   
 	-- CONCURRENT STATEMENTS ----------------------------
-	
+	led_left <= w_lightsL;
+    led_right   <= w_lightsR;
 	-- ground unused LEDs
 	-- leave unused switches UNCONNECTED
 	
 	-- Ignore the warnings associated with these signals
 	-- Alternatively, you can create a different board implementation, 
 	--   or make additional adjustments to the constraints file
-	led(12 downto 3) <= (others => '0');
+	--led(12 downto 3) <= (others => '0');
 	
 end top_basys3_arch;

@@ -11,8 +11,8 @@
 --| ---------------------------------------------------------------------------
 --|
 --| FILENAME      : thunderbird_fsm.vhd
---| AUTHOR(S)     : Capt Phillip Warner, Capt Dan Johnson
---| CREATED       : 03/2017 Last modified 06/25/2020
+--| AUTHOR(S)     : Jaden Liu
+--| CREATED       : 03/2025
 --| DESCRIPTION   : This file implements the ECE 281 Lab 2 Thunderbird tail lights
 --|					FSM using enumerated types.  This was used to create the
 --|					erroneous sim for GR1
@@ -36,18 +36,18 @@
 --|					can be changed by the inputs
 --|					
 --|
---|                 xxx State Encoding key
+--|                 One-Hot State Encoding key
 --|                 --------------------
 --|                  State | Encoding
 --|                 --------------------
---|                  OFF   | 
---|                  ON    | 
---|                  R1    | 
---|                  R2    | 
---|                  R3    | 
---|                  L1    | 
---|                  L2    | 
---|                  L3    | 
+--|                  OFF   | 10000000
+--|                  ON    | 01000000
+--|                  R1    | 00100000
+--|                  R2    | 00010000
+--|                  R3    | 00001000
+--|                  L1    | 00000100
+--|                  L2    | 00000010
+--|                  L3    | 00000001
 --|                 --------------------
 --|
 --|
@@ -85,24 +85,128 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
  
-entity thunderbird_fsm is 
---  port(
-	
---  );
+entity thunderbird_fsm is
+    port (
+        i_clk, i_reset  : in  std_logic;
+        i_left, i_right : in  std_logic;
+        o_lights_L      : out std_logic_vector(2 downto 0);
+        o_lights_R      : out std_logic_vector(2 downto 0)
+    );
 end thunderbird_fsm;
 
-architecture thunderbird_fsm_arch of thunderbird_fsm is 
+architecture thunderbird_fsm_arch of thunderbird_fsm is
+    --switch over to one hot and define
+    constant S_OFF    : std_logic_vector(7 downto 0) := "10000000";  -- OFF
+    constant S_HAZARD : std_logic_vector(7 downto 0) := "01000000";  -- HAZARD
+    constant S_R1     : std_logic_vector(7 downto 0) := "00100000";  -- R1
+    constant S_R2     : std_logic_vector(7 downto 0) := "00010000";  -- R2
+    constant S_R3     : std_logic_vector(7 downto 0) := "00001000";  -- R3
+    constant S_L1     : std_logic_vector(7 downto 0) := "00000100";  -- L1
+    constant S_L2     : std_logic_vector(7 downto 0) := "00000010";  -- L2
+    constant S_L3     : std_logic_vector(7 downto 0) := "00000001";  -- L3
 
--- CONSTANTS ------------------------------------------------------------------
-  
+    --------------------------------------------------------------------------
+    -- State registers
+    --------------------------------------------------------------------------
+    signal f_Q, f_Q_next : std_logic_vector(7 downto 0) := S_OFF;
+
 begin
+    process(i_clk, i_reset)
+    begin
+        if (i_reset = '1') then
+            f_Q <= S_OFF;
+        elsif rising_edge(i_clk) then
+            f_Q <= f_Q_next;
+        end if;
+    end process;
 
-	-- CONCURRENT STATEMENTS --------------------------------------------------------	
-	
-    ---------------------------------------------------------------------------------
-	
-	-- PROCESSES --------------------------------------------------------------------
-    
-	-----------------------------------------------------					   
-				  
+    --------------------------------------------------------------------------
+    -- NEXT STATE LOGIC
+    --------------------------------------------------------------------------
+    process(f_Q, i_left, i_right)
+    begin
+        case f_Q is
+
+            when S_OFF =>
+                if (i_left = '1') and (i_right = '1') then
+                    f_Q_next <= S_HAZARD;
+                elsif (i_left = '1') then
+                    f_Q_next <= S_L1;
+                elsif (i_right = '1') then
+                    f_Q_next <= S_R1;
+                else
+                    f_Q_next <= S_OFF;
+                end if;
+
+            when S_HAZARD =>
+                -- switch off next 
+                f_Q_next <= S_OFF;
+
+            when S_R1 =>
+                f_Q_next <= S_R2;
+
+            when S_R2 =>
+                f_Q_next <= S_R3;
+
+            when S_R3 =>
+                f_Q_next <= S_OFF;
+
+            when S_L1 =>
+                f_Q_next <= S_L2;
+
+            when S_L2 =>
+                f_Q_next <= S_L3;
+
+            when S_L3 =>
+                f_Q_next <= S_OFF;
+
+            when others =>
+                -- default safety net
+                f_Q_next <= S_OFF;
+        end case;
+    end process;
+
+    -- OUTPUT LOGIC
+    process(f_Q)
+    begin
+        case f_Q is
+
+            when S_OFF =>
+                o_lights_L <= "000";
+                o_lights_R <= "000";
+
+            when S_HAZARD =>
+                o_lights_L <= "111";
+                o_lights_R <= "111";
+
+            when S_R1 =>
+                o_lights_L <= "000";
+                o_lights_R <= "100";
+
+            when S_R2 =>
+                o_lights_L <= "000";
+                o_lights_R <= "110";
+
+            when S_R3 =>
+                o_lights_L <= "000";
+                o_lights_R <= "111";
+
+            when S_L1 =>
+                o_lights_L <= "100";
+                o_lights_R <= "000";
+
+            when S_L2 =>
+                o_lights_L <= "110";
+                o_lights_R <= "000";
+
+            when S_L3 =>
+                o_lights_L <= "111";
+                o_lights_R <= "000";
+
+            when others =>
+                o_lights_L <= (others => '0');
+                o_lights_R <= (others => '0');
+        end case;
+    end process;
+
 end thunderbird_fsm_arch;
