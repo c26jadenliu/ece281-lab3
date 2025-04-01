@@ -84,7 +84,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
- 
+
 entity thunderbird_fsm is
     port (
         i_clk, i_reset  : in  std_logic;
@@ -95,19 +95,15 @@ entity thunderbird_fsm is
 end thunderbird_fsm;
 
 architecture thunderbird_fsm_arch of thunderbird_fsm is
-    --switch over to one hot and define
-    constant S_OFF    : std_logic_vector(7 downto 0) := "10000000";  -- OFF
-    constant S_HAZARD : std_logic_vector(7 downto 0) := "01000000";  -- HAZARD
-    constant S_R1     : std_logic_vector(7 downto 0) := "00100000";  -- R1
-    constant S_R2     : std_logic_vector(7 downto 0) := "00010000";  -- R2
-    constant S_R3     : std_logic_vector(7 downto 0) := "00001000";  -- R3
-    constant S_L1     : std_logic_vector(7 downto 0) := "00000100";  -- L1
-    constant S_L2     : std_logic_vector(7 downto 0) := "00000010";  -- L2
-    constant S_L3     : std_logic_vector(7 downto 0) := "00000001";  -- L3
+    constant S_OFF    : std_logic_vector(7 downto 0) := "10000000";
+    constant S_HAZARD : std_logic_vector(7 downto 0) := "01000000";
+    constant S_R1     : std_logic_vector(7 downto 0) := "00100000";
+    constant S_R2     : std_logic_vector(7 downto 0) := "00010000";
+    constant S_R3     : std_logic_vector(7 downto 0) := "00001000";
+    constant S_L1     : std_logic_vector(7 downto 0) := "00000100";
+    constant S_L2     : std_logic_vector(7 downto 0) := "00000010";
+    constant S_L3     : std_logic_vector(7 downto 0) := "00000001";
 
-    --------------------------------------------------------------------------
-    -- State registers
-    --------------------------------------------------------------------------
     signal f_Q, f_Q_next : std_logic_vector(7 downto 0) := S_OFF;
 
 begin
@@ -120,13 +116,9 @@ begin
         end if;
     end process;
 
-    --------------------------------------------------------------------------
-    -- NEXT STATE LOGIC
-    --------------------------------------------------------------------------
     process(f_Q, i_left, i_right)
     begin
         case f_Q is
-
             when S_OFF =>
                 if (i_left = '1') and (i_right = '1') then
                     f_Q_next <= S_HAZARD;
@@ -139,7 +131,6 @@ begin
                 end if;
 
             when S_HAZARD =>
-                -- switch off next 
                 f_Q_next <= S_OFF;
 
             when S_R1 =>
@@ -161,16 +152,13 @@ begin
                 f_Q_next <= S_OFF;
 
             when others =>
-                -- default safety net
                 f_Q_next <= S_OFF;
         end case;
     end process;
 
-    -- OUTPUT LOGIC
     process(f_Q)
     begin
         case f_Q is
-
             when S_OFF =>
                 o_lights_L <= "000";
                 o_lights_R <= "000";
@@ -181,22 +169,22 @@ begin
 
             when S_R1 =>
                 o_lights_L <= "000";
-                o_lights_R <= "100";
+                o_lights_R <= "001";
 
             when S_R2 =>
                 o_lights_L <= "000";
-                o_lights_R <= "110";
+                o_lights_R <= "011";
 
             when S_R3 =>
                 o_lights_L <= "000";
                 o_lights_R <= "111";
 
             when S_L1 =>
-                o_lights_L <= "100";
+                o_lights_L <= "001";
                 o_lights_R <= "000";
 
             when S_L2 =>
-                o_lights_L <= "110";
+                o_lights_L <= "011";
                 o_lights_R <= "000";
 
             when S_L3 =>
