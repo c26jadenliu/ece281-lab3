@@ -50,7 +50,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
-  
+
 entity thunderbird_fsm_tb is
 end thunderbird_fsm_tb;
 
@@ -72,7 +72,6 @@ architecture test_bench of thunderbird_fsm_tb is
     signal w_lights_L  : std_logic_vector(2 downto 0);
     signal w_lights_R  : std_logic_vector(2 downto 0);
 
-    -- 100 MHz => 10 ns period
     constant k_clk_period : time := 10 ns;
 
 begin
@@ -99,11 +98,10 @@ begin
     begin
         report "Apply reset" severity note;
         w_reset <= '1';
-        wait for k_clk_period;  -- 1 clock
-        wait for k_clk_period;  -- 2 clocks
+        wait for k_clk_period;
+        wait for k_clk_period;
         w_reset <= '0';
 
-        --timing
         wait for k_clk_period;
         assert (w_lights_L = "000" and w_lights_R = "000")
             report "ERROR: Not OFF after reset"
@@ -112,55 +110,47 @@ begin
         report "LEFT turn signal test" severity note;
         w_left <= '1';
 
-        --L1
         wait for k_clk_period;
-        assert (w_lights_L = "100")
-            report "ERROR: left not L1 => '100'"
+        assert (w_lights_L = "001")
+            report "ERROR: left not L1 => '001'"
             severity failure;
 
-        --L2
         wait for k_clk_period;
-        assert (w_lights_L = "110")
-            report "ERROR: left not L2 => '110'"
+        assert (w_lights_L = "011")
+            report "ERROR: left not L2 => '011'"
             severity failure;
 
-        --L3
         wait for k_clk_period;
         assert (w_lights_L = "111")
             report "ERROR: left not L3 => '111'"
             severity failure;
 
-        --off
         wait for k_clk_period;
         assert (w_lights_L = "000")
             report "ERROR: left not returning off"
             severity failure;
 
-        w_left <= '0';  
+        w_left <= '0';
         wait for k_clk_period;
 
         report "right turn test" severity note;
         w_right <= '1';
 
-        -- R1
         wait for k_clk_period;
-        assert (w_lights_R = "100")
+        assert (w_lights_R = "001")
             report "ERROR: right not R1"
             severity failure;
 
-        -- R2
         wait for k_clk_period;
-        assert (w_lights_R = "110")
+        assert (w_lights_R = "011")
             report "ERROR: right not R2"
             severity failure;
 
-        -- R3
         wait for k_clk_period;
         assert (w_lights_R = "111")
             report "ERROR: right not R3"
             severity failure;
 
-        -- revert to off
         wait for k_clk_period;
         assert (w_lights_R = "000")
             report "ERROR: right not returning to off"
@@ -168,18 +158,16 @@ begin
 
         w_right <= '0';
         wait for k_clk_period;
-        
+
         report "hazard test" severity note;
         w_left  <= '1';
         w_right <= '1';
 
-        -- all on
         wait for k_clk_period;
         assert (w_lights_L = "111" and w_lights_R = "111")
             report "ERROR: hazard lights not on"
             severity failure;
 
-        -- off
         wait for k_clk_period;
         assert (w_lights_L = "000" and w_lights_R = "000")
             report "ERROR: hazard not returning to off"
@@ -188,7 +176,6 @@ begin
         w_left  <= '0';
         w_right <= '0';
 
-        ------------------------------------------------------------------------
         report "tests passed" severity note;
         wait;
     end process sim_proc;
